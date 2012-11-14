@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="lib" path="lib/base/openkinect/openkinect.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lowres/lib/base/openkinect"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/base/video/video.jar" sourcepath="/Applications/Processing.app/Contents/Resources/Java/libraries/video/src">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lowres/lib/base/video"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/base/core/ant-launcher.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lowres/lib/base/core"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/base/core/ant.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lowres/lib/base/core"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/base/core/core.jar">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="lowres/lib/base/core"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/Users/gavrilobozovic/Documents/workspace/lowres/lib/base/mesh/mesh.jar"/>
+	<classpathentry kind="lib" path="/Users/gavrilobozovic/Documents/workspace/lowres/lib/base/mesh/quickhull3d.1.4.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
