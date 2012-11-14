@@ -26,8 +26,10 @@ public class Lowres extends PApplet {
 	boolean showKinect = false;
 	boolean usingKinect = false;
 
-	ArrayList<Circle> circles; 
+	//ArrayList<Circle> circles; 
 
+	PixelArray pixelArray;
+	
 	float levelHysteresis = 1f;		// hysteresis for the selection of level, depending on the desired level and current level
 
 	public void setup() {
@@ -36,9 +38,13 @@ public class Lowres extends PApplet {
 
 		myCapture = new Capture(this,1920, 1080, 30);
 
-		circles = new ArrayList<Circle>();
+	/*	circles = new ArrayList<Circle>();
 		circles.add(new Circle(width/2, height/2, width, "0"));
-
+*/
+		
+		pixelArray = new PixelArray();
+		pixelArray.add(width/2, height/2, width, "0");
+		
 		rectMode(CENTER);
 		noStroke();
 
@@ -73,42 +79,38 @@ public class Lowres extends PApplet {
 			depth.updatePixels();
 		}
 
-		for(int i=0;i<circles.size();i++) {
-			Circle currentCircle = circles.get(i);
-
-			if(currentCircle.active == false)
-				circles.remove(i);
+		pixelArray.update();
+		
+		for(int i=0;i<pixelArray.size();i++) {
+			
+			Pixel currentPixel = pixelArray.pixels.get(i);
 
 			if(usingKinect){
-				float desiredLevel = gray(depth.get(round(currentCircle.xCenter*640/1920), round(currentCircle.yCenter*480/height)));
+				float desiredLevel = gray(depth.get(round(currentPixel.xCenter*640/1920), round(currentPixel.yCenter*480/height)));
 				desiredLevel/=25;
-				int currentLevel = currentCircle.id.length();
+				int currentLevel = currentPixel.id.length();
 
 				println("current level: " + currentLevel + ", desired level: " + desiredLevel);
 
 				if(desiredLevel>currentLevel+levelHysteresis && currentLevel<7)
-					divide(i);
+					pixelArray.divide(i);
 
 				if(desiredLevel<currentLevel-levelHysteresis && currentLevel>1)
-					merge(i);
+					pixelArray.merge(i);
 			}
 
 
-			if(mirror)
-				fill(myCapture.get(width-round(currentCircle.xCenter), round(currentCircle.yCenter)));
-			else
-				fill(myCapture.get(round(currentCircle.xCenter), round(currentCircle.yCenter)));
-
+			fill(myCapture.get(width*(mirror==true?1:0)+round(currentPixel.xCenter)*(mirror==true?-1:1), round(currentPixel.yCenter)));
 
 			switch(mode) {
-			case 0: ellipse(currentCircle.xCenter, currentCircle.yCenter, currentCircle.diameter, currentCircle.diameter); break;
-			case 1: rect(currentCircle.xCenter, currentCircle.yCenter, currentCircle.diameter, currentCircle.diameter); break;
+			case 0: ellipse(currentPixel.xCenter, currentPixel.yCenter, currentPixel.expanse, currentPixel.expanse); break;
+			case 1: rect(currentPixel.xCenter, currentPixel.yCenter, currentPixel.expanse, currentPixel.expanse); break;
 			default: break;
 			}
 
 		}	
 
-		text("framerate : " + frameRate+ ", number of circles : " + circles.size(),10,10);
+		text("framerate : " + frameRate+ ", number of circles : " + pixelArray.size(),10,10);
 
 
 		if(showKinect)
@@ -117,8 +119,8 @@ public class Lowres extends PApplet {
 
 	public void mouseClicked() {
 
-		for(int i=0;i<circles.size();i++) {
-			Circle currentCircle = circles.get(i);
+		for(int i=0;i<pixelArray.size();i++) {
+			Pixel currentPixel = pixelArray.pixels.get(i);
 
 			/*
 			if(currentCircle.isInCircle(mouseX, mouseY) && currentCircle.id.length()>1){
@@ -127,8 +129,8 @@ public class Lowres extends PApplet {
 				break;
 			}*/
 
-			if(currentCircle.isInCircle(mouseX, mouseY)){
-				merge(i);
+			if(currentPixel.isInPixel(mouseX, mouseY)){
+				pixelArray.merge(i);
 				break;
 			}
 
@@ -138,11 +140,11 @@ public class Lowres extends PApplet {
 
 	public void mouseDragged() {
 
-		for(int i=0;i<circles.size();i++) {
-			Circle currentCircle = circles.get(i);
+		for(int i=0;i<pixelArray.size();i++) {
+		Pixel currentPixel = pixelArray.pixels.get(i);
 
-			if(currentCircle.isInCircle(mouseX, mouseY)){
-				divide(i);
+			if(currentPixel.isInPixel(mouseX, mouseY)){
+				pixelArray.divide(i);
 
 				break;
 			}
@@ -178,127 +180,116 @@ public class Lowres extends PApplet {
 	public int gray(int value) {
 		return max((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
 	}
-
-	public void divide(int index) {
+	
+	
+	class PixelArray {
 		/*
-		 * divides the current circle in 4:
-		 * Assigns the new values to its diameter, position and id
-		 * and adds three more circles to the arraylist
+		 * The class pixelarray manages the position and size of pixels
+		 * in a variable density grid. It maintains the list of pixels
+		 * and manages their update, merge and divide
 		 */
-
-		Circle currentCircle = circles.get(index);
-
-		currentCircle.xCenter -= currentCircle.diameter/4;
-		currentCircle.yCenter -= currentCircle.diameter/4;
-
-		currentCircle.diameter /= 2;
-
-		circles.add(index+1, new Circle(currentCircle.xCenter+currentCircle.diameter, currentCircle.yCenter+currentCircle.diameter, currentCircle.diameter, currentCircle.id+"3"));
-		circles.add(index+1, new Circle(currentCircle.xCenter, currentCircle.yCenter+currentCircle.diameter, currentCircle.diameter, currentCircle.id+"2"));
-		circles.add(index+1, new Circle(currentCircle.xCenter+currentCircle.diameter, currentCircle.yCenter, currentCircle.diameter, currentCircle.id+"1"));
-
-		currentCircle.id +="0";
-
-	}
-
-	public void merge(int index) {
-		/*
-		 * merges the current circle with its three predecessors:
-		 * reaffects its coordinates, size and id, and removes predecessors
-		 * from arraylist
-		 */
-
-		Circle currentCircle = circles.get(index);
 		
-		println("merging from circle id: " + 	currentCircle.id + ", new id : " + currentCircle.id.substring(0, currentCircle.id.length()-1));
-		int cpt = 0;
 		
-		while(cpt<circles.size()) {
+		private ArrayList<Pixel> pixels;
+		
+		
+		
+		PixelArray() {
 			
-			Circle localCircle=circles.get(cpt);
-			String[] m = match(localCircle.id, "^" + currentCircle.id.substring(0, currentCircle.id.length()-1));
-			if(m != null && localCircle.id.equals(currentCircle.id)==false) {	// the circle is beginning with the same substring, and is not the current one. remove.
-				circles.remove(cpt);
-				println("removing circle id: " + localCircle.id);
-			} else
-				cpt++;
+			pixels = new ArrayList<Pixel>();
+		}
+		
+		public void add(float x, float y, float e, String id) {
+			
+			pixels.add(new Pixel(x,y,e,id));
+		}
+		
+		public void merge(int index) {
+			/*
+			 * merges the current circle with its three predecessors:
+			 * reaffects its coordinates, size and id, and removes predecessors
+			 * from arraylist
+			 */
+
+		Pixel currentPixel = pixels.get(index);
+			
+			int cpt = 0;
+			
+			while(cpt<pixels.size()) {
+				
+			Pixel localPixel=pixels.get(cpt);
+				String[] m = match(localPixel.id, "^" + currentPixel.id.substring(0, currentPixel.id.length()-1));
+				if(m != null && localPixel.id.equals(currentPixel.id)==false) {	// the circle is beginning with the same substring, and is not the current one. remove.
+					pixels.remove(cpt);
+					println("removing pixel id: " + localPixel.id);
+				} else
+					cpt++;
+				
+			}
+			
+			currentPixel.id = currentPixel.id.substring(0, currentPixel.id.length()-1);
+
+			currentPixel.xCenter += (currentPixel.expanse/2)*((floor(currentPixel.xCenter/currentPixel.expanse)%2 == 0)?1:-1);
+			currentPixel.yCenter += (currentPixel.expanse/2)*((floor(currentPixel.yCenter/currentPixel.expanse)%2 == 0)?1:-1);
+
+			currentPixel.expanse *= 2;
+
+		}
+		
+		public void divide(int index) {
+			/*
+			 * divides the current circle in 4:
+			 * Assigns the new values to its diameter, position and id
+			 * and adds three more circles to the arraylist
+			 */
+
+			Pixel currentPixel = pixels.get(index);
+
+			currentPixel.xCenter -= currentPixel.expanse/4;
+			currentPixel.yCenter -= currentPixel.expanse/4;
+
+			currentPixel.expanse /= 2;
+
+			pixels.add(index+1, new Pixel(currentPixel.xCenter+currentPixel.expanse, currentPixel.yCenter+currentPixel.expanse, currentPixel.expanse, currentPixel.id+"3"));
+			pixels.add(index+1, new Pixel(currentPixel.xCenter, currentPixel.yCenter+currentPixel.expanse, currentPixel.expanse, currentPixel.id+"2"));
+			pixels.add(index+1, new Pixel(currentPixel.xCenter+currentPixel.expanse, currentPixel.yCenter, currentPixel.expanse, currentPixel.id+"1"));
+
+			currentPixel.id +="0";
+
+		}
+		
+		public int size() {
+			return pixels.size();
+		}
+		
+		public void update() {
 			
 		}
 		
-		currentCircle.id = currentCircle.id.substring(0, currentCircle.id.length()-1);
-
-		currentCircle.xCenter += (currentCircle.diameter/2)*((floor(currentCircle.xCenter/currentCircle.diameter)%2 == 0)?1:-1);
-		currentCircle.yCenter += (currentCircle.diameter/2)*((floor(currentCircle.yCenter/currentCircle.diameter)%2 == 0)?1:-1);
-
-		currentCircle.diameter *= 2;
-
+		
 	}
-
-
-
-	class Circle {
-
-		float baseDiameter;		// starting diameter, prior to transition
-		float diameter;			// current actual diameter
+	
+	class Pixel {
+		
+		float expanse;			// width & height of the pixel
 		float xCenter;
 		float yCenter;
-
-		boolean active=true;
 
 		int transitionTime;		// time in milliseconds at which a transition started
 		boolean transitionUp;	// true if the circle is growing, false otherwise
 
 		String id;		// string that identifies uniquely the circle. It contains info about the circle's parent
 
-		Circle(float x, float y, float d, String _id) {
+		Pixel(float x, float y, float e, String _id) {
 
-			diameter = d;
+			expanse = e;
 			xCenter = x;
 			yCenter = y;
 
 			id = _id;
-			active = true;
 
 			transitionTime= millis();		// when created, a transition starts
 		}
-
-		/*
-		public void divide(ArrayList<Circle> theCircles) {
-
-			xCenter = xCenter - diameter/4;
-			yCenter = yCenter - diameter/4;
-
-			diameter = diameter/2;
-
-			theCircles.add(new Circle(xCenter+diameter, yCenter, diameter, id+"1"));
-			theCircles.add(new Circle(xCenter, yCenter+diameter, diameter, id+"2"));
-			theCircles.add(new Circle(xCenter+diameter, yCenter+diameter, diameter, id+"3"));
-
-			id = id+"0";
-
-		}
-
-		public void merge(ArrayList<Circle> theCircles) {			
-
-			id = id.substring(0, id.length()-1);
-
-			xCenter = xCenter + (diameter/2)*((floor(xCenter/diameter)%2 == 0)?1:-1);
-			yCenter = yCenter + (diameter/2)*((floor(yCenter/diameter)%2 == 0)?1:-1);
-
-			diameter = diameter*2;
-
-			for(int i=0; i<theCircles.size();i++) {
-
-				Circle currentCircle=theCircles.get(i);
-				String[] m = match(currentCircle.id, id+".");
-				if(m != null) {
-					currentCircle.active =false;
-				} 		
-
-
-			}
-
-		}*/
 
 		public void update(){
 			/*
@@ -309,18 +300,19 @@ public class Lowres extends PApplet {
 			//diameter = baseDiameter*(1+tanh((millis()-transitionTime-3000)/2));
 
 		}
+		
 
+		public boolean isInPixel(int x, int y) {
 
-		public boolean isInCircle(int x, int y) {
-
-			if(x < xCenter + diameter / 2 && x>xCenter-diameter/2 && y < yCenter+diameter/2 && y>yCenter-diameter/2)
+			if(x < xCenter + expanse / 2 && x>xCenter-expanse/2 && y < yCenter+expanse/2 && y>yCenter-expanse/2)
 				return true;
 			else
 				return false;
 		}
 
-
+		
 	}
+
 
 
 }
